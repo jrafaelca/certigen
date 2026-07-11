@@ -1,0 +1,12 @@
+output/
+.output/
+.nuxt/
+letsencrypt/
+data/
+node_modules/
+.DS_Store
+.idea/
+.pnpm-store/
+.codex/
+.env
+.env.local
