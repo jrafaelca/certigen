@@ -3,7 +3,7 @@ services:
     image: ${IMAGE_NAME:-ghcr.io/jrafaelca/certigen:latest}
     pull_policy: always
     ports:
-      - "3000:3000"
+      - "${FORWARD_PORT:-3000}:3000"
     environment:
       PORT: ${PORT:-3000}
       APP_HOST: ${APP_HOST:-0.0.0.0}
