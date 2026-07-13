@@ -1,7 +1,25 @@
 export function useWizardState() {
-  const sessionId = useState('wizard-session-id', () =>
-    globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(16).slice(2)}`,
-  )
+  function createSessionId() {
+    if (globalThis.crypto?.randomUUID) {
+      return globalThis.crypto.randomUUID()
+    }
+
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (character) => {
+      const random = Math.floor(Math.random() * 16)
+      const value = character === 'x' ? random : (random & 0x3) | 0x8
+      return value.toString(16)
+    })
+  }
+
+  function isValidSessionId(value) {
+    return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(value || '').trim())
+  }
+
+  const sessionId = useState('wizard-session-id', () => createSessionId())
+  if (!isValidSessionId(sessionId.value)) {
+    sessionId.value = createSessionId()
+  }
+
   const requestId = useState('wizard-request-id', () => '')
   const email = useState('wizard-email', () => '')
   const request = useState('wizard-request', () => null)

@@ -5,3 +5,8 @@ node_modules
 data
 coverage
 *.log
+AGENTS.md
+README.md
+.github
+compose.yaml
+compose.local.yaml

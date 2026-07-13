@@ -4,10 +4,6 @@ ENV PORT=3000 \
     APP_HOST=0.0.0.0 \
     DATA_DIR=/data
 
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends zip openssl ca-certificates certbot \
-    && rm -rf /var/lib/apt/lists/*
-
 WORKDIR /app
 RUN corepack enable
 
@@ -26,11 +22,22 @@ FROM deps AS build
 COPY . .
 RUN pnpm build
 
-FROM base AS production
-ENV NODE_ENV=production
+FROM node:24-bookworm-slim AS production
+ENV PORT=3000 \
+    APP_HOST=0.0.0.0 \
+    DATA_DIR=/data \
+    NODE_ENV=production
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends zip openssl ca-certificates certbot \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+RUN corepack enable
+
 COPY --from=deps /app/node_modules ./node_modules
 COPY --from=build /app/.output ./.output
-COPY . .
+COPY server/certbot-hooks ./server/certbot-hooks
 RUN mkdir -p /data && chmod +x /app/server/certbot-hooks/*.js
 EXPOSE 3000
 CMD ["node", ".output/server/index.mjs"]
