@@ -37,6 +37,7 @@ RUN corepack enable
 
 COPY --from=deps /app/node_modules ./node_modules
 COPY --from=build /app/.output ./.output
+COPY server/utils ./server/utils
 COPY server/certbot-hooks ./server/certbot-hooks
 RUN mkdir -p /data && chmod +x /app/server/certbot-hooks/*.js
 EXPOSE 3000

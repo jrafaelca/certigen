@@ -9,7 +9,7 @@ import {
   sameDomainSet,
 } from '../server/utils/utils.js';
 import { validateDownloadUuid, validateEmail, validateRequestInput, validateSessionId } from '../server/utils/validation.js';
-import { parseChallengeDetails } from '../server/utils/certbot.js';
+import { extractCertbotFailureMessage, parseChallengeDetails } from '../server/utils/certbot.js';
 
 test('normalizes domains with uppercase letters and trailing dot', () => {
   assert.equal(normalizeDomain(' Ejemplo.COM. '), 'ejemplo.com');
@@ -55,6 +55,21 @@ Before continuing, verify the DNS record is deployed.
     recordName: '_acme-challenge.example.com',
     recordValue: 'ABCDE12345',
   });
+});
+
+test('extracts the actionable Certbot failure message', () => {
+  const sample = [
+    "Hook '--manual-auth-hook' for example.com ran with error output:",
+    " Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/app/server/utils/json-store.js' imported from /app/server/certbot-hooks/auth-hook.js",
+    'Certbot failed to authenticate some domains (authenticator: manual).',
+    'Some challenges have failed.',
+    'Ask for help or search for solutions at https://community.letsencrypt.org. See the logfile /data/certbot/logs/letsencrypt.log or re-run Certbot with -v for more details.',
+  ];
+
+  assert.equal(
+    extractCertbotFailureMessage(sample, 'Unexpected error.'),
+    "Certbot hook could not load /app/server/utils/json-store.js.",
+  );
 });
 
 test('validates download UUIDs', () => {

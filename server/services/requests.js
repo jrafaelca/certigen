@@ -5,6 +5,7 @@ import { requestPaths } from './paths.js';
 import { ensureDir, readJson, removeIfExists, writeJsonAtomic, pathExists, listFiles } from '../utils/json-store.js';
 import { validateRequestInput, validateDownloadUuid, validateSessionId } from '../utils/validation.js';
 import { normalizeDomainSet, nowIso, sameDomainSet, sleep } from '../utils/utils.js';
+import { extractCertbotFailureMessage } from '../utils/certbot.js';
 import { startCertbotProcess } from './certbot.js';
 import { verifyDnsRecord } from './dns.js';
 import { packageCertificate } from './export.js';
@@ -35,21 +36,6 @@ async function readTail(filePath, maxLines = 80) {
   } catch {
     return [];
   }
-}
-
-function extractFailureMessage(lines = [], fallback = 'Unexpected error.') {
-  const meaningful = [...lines].reverse().find((line) => {
-    if (!line) return false
-    if (line.startsWith('error Certbot exited with code')) return false
-    if (line.startsWith('error Certbot could not start inside the container.')) return false
-    return /^(stderr|stdout|error)\s+/i.test(line)
-  })
-
-  if (!meaningful) {
-    return fallback
-  }
-
-  return meaningful.replace(/^(stderr|stdout|error)\s+/i, '')
 }
 
 function describeDnsFailure(status) {
@@ -303,15 +289,13 @@ export class RequestManager {
         if (exit?.code !== 0) {
           const currentState = await readJson(paths.stateJson, statusPayload('starting'));
           const recentLogs = currentState?.recentLogs || [];
-          const failureMessage = extractFailureMessage(
+          const failureMessage = extractCertbotFailureMessage(
             recentLogs,
             exit?.code === -2
               ? 'Certbot could not start inside the container.'
               : `Certbot exited with code ${exit.code}${exit.signal ? ` (${exit.signal})` : ''}`,
           );
-          const message =
-            failureMessage;
-          await this.failRequest(requestId, new Error(message));
+          await this.failRequest(requestId, new Error(failureMessage));
           return;
         }
 
