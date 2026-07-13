@@ -2,3 +2,12 @@ allowBuilds:
   '@parcel/watcher': true
   esbuild: true
   vue-demi: true
+
+minimumReleaseAge: 1440
+minimumReleaseAgeExclude:
+  - '@typescript-eslint/project-service'
+  - '@typescript-eslint/scope-manager'
+  - '@typescript-eslint/tsconfig-utils'
+  - '@typescript-eslint/types'
+  - '@typescript-eslint/typescript-estree'
+  - '@typescript-eslint/visitor-keys'
