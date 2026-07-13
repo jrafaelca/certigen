@@ -21,7 +21,6 @@ function buildConfig() {
 
   return {
     dataDir: legacyConfig.dataDir,
-    version: runtimeConfig.version || legacyConfig.version,
     requestTtlMinutes: toPositiveInt(runtimeConfig.requestTtlMinutes, legacyConfig.requestTtlMinutes),
     downloadTtlMinutes: toPositiveInt(runtimeConfig.downloadTtlMinutes, legacyConfig.downloadTtlMinutes),
     downloadMaxCount: toPositiveInt(runtimeConfig.downloadMaxCount, legacyConfig.downloadMaxCount),

@@ -1,8 +1,3 @@
-import { createRequire } from 'node:module'
-
-const require = createRequire(import.meta.url)
-const { version } = require('./package.json')
-
 export default defineNuxtConfig({
   ssr: false,
   modules: ['@nuxt/ui', '@nuxtjs/i18n', '@vueuse/nuxt'],
@@ -32,7 +27,6 @@ export default defineNuxtConfig({
   },
   runtimeConfig: {
     dataDir: '/data',
-    version,
     requestTtlMinutes: process.env.REQUEST_TTL_MINUTES || '60',
     downloadTtlMinutes: process.env.DOWNLOAD_TTL_MINUTES || '60',
     downloadMaxCount: process.env.DOWNLOAD_MAX_COUNT || '1',

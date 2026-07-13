@@ -1,13 +1,8 @@
-import { createRequire } from 'node:module';
 import { toPositiveInt } from './utils.js';
-
-const require = createRequire(import.meta.url);
-const { version } = require('../../package.json');
 
 export const config = {
   port: 3000,
   host: '0.0.0.0',
-  version,
   dataDir: '/data',
   requestTtlMinutes: toPositiveInt(process.env.REQUEST_TTL_MINUTES, 60),
   downloadTtlMinutes: toPositiveInt(process.env.DOWNLOAD_TTL_MINUTES, 60),
