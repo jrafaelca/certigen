@@ -1,0 +1,158 @@
+{
+  "common": {
+    "actions": {
+      "back": "Back",
+      "cancel": "Cancel",
+      "continue": "Continue",
+      "copy": "Copy",
+      "createRequest": "Create request",
+      "downloadZip": "Download ZIP",
+      "openGitHub": "Open on GitHub",
+      "renew": "Renew",
+      "retry": "Retry",
+      "useExisting": "Use existing",
+      "verify": "Verify"
+    },
+    "errors": {
+      "operationFailed": "The operation could not be completed."
+    },
+    "noData": "-",
+    "status": {
+      "pending": "Pending",
+      "starting": "Starting",
+      "waitingDns": "Waiting for DNS",
+      "checkingDns": "Checking DNS",
+      "issuing": "Issuing",
+      "packaging": "Packaging",
+      "ready": "Ready",
+      "failed": "Failed",
+      "cancelled": "Cancelled",
+      "expired": "Expired",
+      "retryRequired": "Retry required"
+    }
+  },
+  "header": {
+    "github": "Open on GitHub"
+  },
+  "footer": {
+    "copyright": "Copyright © {year}",
+    "certbot": "Certbot"
+  },
+  "request": {
+    "steps": {
+      "settings": {
+        "title": "Request",
+        "caption": "Set up the request."
+      },
+      "dnsRecord": {
+        "title": "DNS record",
+        "caption": "Create and verify."
+      },
+      "certificates": {
+        "title": "Certificates",
+        "caption": "Your generated bundle."
+      }
+    },
+    "form": {
+      "email": {
+        "label": "Email address",
+        "placeholder": "you@your-domain.com",
+        "hint": "Used for ACME account notices."
+      },
+      "authority": {
+        "label": "Certificate authority",
+        "options": {
+          "letsencrypt": "Let’s Encrypt",
+          "zerossl": "ZeroSSL"
+        }
+      },
+      "domains": {
+        "label": "Domains",
+        "placeholder": "example.com, www.example.com",
+        "hint": "Enter domains separated by commas. The first one becomes primary."
+      },
+      "wildcard": {
+        "label": "Include wildcard coverage"
+      },
+      "validation": {
+        "email": "Enter a valid email address.",
+        "authority": "Select a supported certificate authority.",
+        "domains": "Enter valid domain names.",
+        "atLeastOne": "Add at least one domain."
+      }
+    },
+    "banner": {
+      "addDomain": "Add at least one domain to create the request.",
+      "addEmail": "Add an email address to continue.",
+      "ready": "Certificate ready for download."
+    },
+    "modal": {
+      "title": "Certificate already exists",
+      "description": "We found a valid certificate for the same domain set. Renewing will create a fresh request.",
+      "domains": "Domains",
+      "status": "Status",
+      "updated": "Updated",
+      "actions": {
+        "cancel": "Cancel",
+        "continue": "Continue",
+        "renew": "Renew"
+      }
+    }
+  },
+  "dns": {
+    "title": "DNS record",
+    "description": "Create and verify.",
+    "details": {
+      "domains": "Domains",
+      "expiresIn": "Expires in",
+      "certificateAuthority": "CA",
+      "status": "Status",
+      "updated": "Updated"
+    },
+    "alerts": {
+      "preparingTitle": "Preparing the DNS record",
+      "preparingBody": "Certbot is generating the TXT values. They will appear here as soon as they are ready.",
+      "waitingTitle": "Checking DNS records",
+      "waitingBody": "Waiting for propagation. This can take up to 60 seconds.",
+      "notVisibleYet": "The TXT record is not visible yet."
+    },
+    "record": {
+      "name": "Record name",
+      "value": "Record content",
+      "copy": "Copy to clipboard",
+      "copyName": "Copy record name",
+      "copyValue": "Copy record value"
+    },
+    "actions": {
+      "verify": "Verify",
+      "retry": "Retry",
+      "retrying": "Retrying...",
+      "checkingDns": "Checking DNS...",
+      "preparingBundle": "Preparing bundle..."
+    }
+  },
+  "certificates": {
+    "title": "Certificates",
+    "description": "Your generated bundle.",
+    "details": {
+      "issuedAt": "Issued at",
+      "expiresAt": "Expires at",
+      "sha256Fingerprint": "SHA-256 fingerprint"
+    },
+    "examples": {
+      "title": "Installation examples",
+      "description": "Use the snippet that matches your stack.",
+      "tabs": {
+        "nginx": "Nginx",
+        "apache": "Apache",
+        "haproxy": "HAProxy",
+        "nodejs": "Node.js",
+        "docker": "Docker"
+      }
+    },
+    "actions": {
+      "downloadZip": "Download ZIP",
+      "copySnippet": "Copy snippet"
+    }
+  }
+}

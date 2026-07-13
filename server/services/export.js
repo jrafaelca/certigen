@@ -45,7 +45,7 @@ export async function packageCertificate({ request, paths, dataDir, logger }) {
         filename: `${request.primaryDomain}-certificates.zip`,
         createdAt: new Date().toISOString(),
         expiresAt: new Date(Date.now() + request.downloadTtlMinutes * 60_000).toISOString(),
-        remainingDownloads: request.downloadMaxCount,
+        remainingDownloads: 1,
       },
       null,
       2,

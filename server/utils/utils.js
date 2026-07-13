@@ -67,6 +67,10 @@ export function sameDomainSet(left, right) {
   const leftSet = normalizeDomainSet(left);
   const rightSet = normalizeDomainSet(right);
 
+  if (!leftSet.length || !rightSet.length) {
+    return false;
+  }
+
   if (leftSet.length !== rightSet.length) {
     return false;
   }

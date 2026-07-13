@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@nuxt/ui": "^4.9.0",
+    "@nuxtjs/i18n": "^10.4.1",
     "@vueuse/core": "^14.3.0",
     "archiver": "^7.0.1",
     "nuxt": "^4.4.8",

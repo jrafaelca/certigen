@@ -29,7 +29,9 @@ export default defineEventHandler((event) =>
 
     const response = await sendStream(event, createReadStream(zipPath))
 
-    if (metadata.remainingDownloads <= 0 || new Date(metadata.expiresAt).getTime() <= Date.now()) {
+    if (metadata.remainingDownloads <= 0) {
+      await manager.finalizeDownload(downloadUuid)
+    } else if (new Date(metadata.expiresAt).getTime() <= Date.now()) {
       await manager.cleanupExpired()
     }
 

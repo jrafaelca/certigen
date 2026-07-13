@@ -1,14 +1,9 @@
 services:
   certigen:
     image: ghcr.io/jrafaelca/certigen:latest
-    pull_policy: always
+    restart: unless-stopped
+    env_file: .env
     ports:
       - "${FORWARD_PORT:-3000}:3000"
-    environment:
-      PORT: "${PORT:-3000}"
-      APP_HOST: "${APP_HOST:-0.0.0.0}"
-      DATA_DIR: "${DATA_DIR:-/data}"
-      APP_NAME: "${APP_NAME:-Certigen}"
     volumes:
       - ./data:/data
-    restart: unless-stopped

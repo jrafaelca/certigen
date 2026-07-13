@@ -3,7 +3,7 @@ import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { requestPaths } from './paths.js';
 import { ensureDir, readJson, removeIfExists, writeJsonAtomic, pathExists, listFiles } from '../utils/json-store.js';
-import { validateRequestInput, validateDownloadUuid } from '../utils/validation.js';
+import { validateRequestInput, validateDownloadUuid, validateSessionId } from '../utils/validation.js';
 import { normalizeDomainSet, nowIso, sameDomainSet, sleep } from '../utils/utils.js';
 import { startCertbotProcess } from './certbot.js';
 import { verifyDnsRecord } from './dns.js';
@@ -81,6 +81,16 @@ function requestFile(requestId, dataDir) {
   return requestPaths(dataDir, requestId);
 }
 
+function normalizeSessionId(value) {
+  const sessionId = String(value ?? '').trim();
+  return validateSessionId(sessionId) ? sessionId : '';
+}
+
+function normalizeRequestId(value) {
+  const requestId = String(value ?? '').trim();
+  return validateDownloadUuid(requestId) ? requestId : '';
+}
+
 async function readChallenges(challengesDir) {
   const files = await listFiles(challengesDir, '.json');
   const challenges = [];
@@ -148,6 +158,11 @@ export class RequestManager {
       throw error;
     }
 
+    const sessionId = normalizeSessionId(payload?.sessionId);
+    if (!sessionId) {
+      return null;
+    }
+
     const targetDomains = normalizeDomainSet(validation.value.domains);
     const requestsDir = path.join(this.dataDir, 'requests');
     const requestIds = await fs.readdir(requestsDir).catch(() => []);
@@ -156,7 +171,11 @@ export class RequestManager {
     for (const requestId of requestIds) {
       const paths = requestFile(requestId, this.dataDir);
       const request = await readJson(paths.requestJson, null);
-      if (!request || !sameDomainSet(request.domains, targetDomains)) {
+      if (!request || !Array.isArray(request.domains) || !request.domains.length) {
+        continue;
+      }
+
+      if (request.sessionId !== sessionId || !request.primaryDomain || !sameDomainSet(request.domains, targetDomains)) {
         continue;
       }
 
@@ -187,6 +206,18 @@ export class RequestManager {
       throw error;
     }
 
+    const sessionId = normalizeSessionId(payload?.sessionId);
+    if (!sessionId) {
+      const error = new Error('Invalid wizard session.');
+      error.statusCode = 400;
+      throw error;
+    }
+
+    const renewalRequestId = normalizeRequestId(payload?.renewalRequestId);
+    if (renewalRequestId) {
+      await this.invalidateRequest(renewalRequestId, 'The previous certificate bundle was replaced by a renewal.');
+    }
+
     if ((await this.countActive()) >= this.config.maxConcurrentRequests) {
       const error = new Error('The concurrent request limit was reached.');
       error.statusCode = 429;
@@ -200,10 +231,11 @@ export class RequestManager {
       requestId,
       createdAt,
       updatedAt: createdAt,
+      sessionId,
       ...validation.value,
       certificateAuthority: validation.value.certificateAuthority || 'letsencrypt',
       downloadTtlMinutes: this.config.downloadTtlMinutes,
-      downloadMaxCount: this.config.downloadMaxCount,
+      downloadMaxCount: 1,
     };
 
     await Promise.all([
@@ -224,6 +256,7 @@ export class RequestManager {
       {
         event: 'request.created',
         request_id: requestId,
+        session_id: sessionId,
         primary_domain: request.primaryDomain,
         domains_count: request.domains.length,
       },
@@ -543,6 +576,10 @@ export class RequestManager {
       return null;
     }
 
+    if (metadata.remainingDownloads <= 0) {
+      return null;
+    }
+
     if (new Date(metadata.expiresAt).getTime() <= Date.now()) {
       await markRequestExpired(this.dataDir, metadata.requestId);
       await removeDownloadArtifacts(this.dataDir, downloadUuid);
@@ -568,11 +605,54 @@ export class RequestManager {
     await writeDownloadMetadata(this.dataDir, downloadUuid, metadata);
 
     if (metadata.remainingDownloads <= 0) {
-      metadata.expiredAt = nowIso();
       await markRequestExpired(this.dataDir, metadata.requestId);
     }
 
     return metadata;
+  }
+
+  async finalizeDownload(downloadUuid) {
+    if (!validateDownloadUuid(downloadUuid)) {
+      return null;
+    }
+
+    const metadata = await readDownloadMetadata(this.dataDir, downloadUuid);
+    if (!metadata) {
+      return null;
+    }
+
+    const paths = requestFile(metadata.requestId, this.dataDir);
+    await removeDownloadArtifacts(this.dataDir, downloadUuid);
+    await fs.rm(paths.root, { recursive: true, force: true });
+    return metadata;
+  }
+
+  async invalidateRequest(requestId, message = 'The certificate bundle was replaced.') {
+    const paths = requestFile(requestId, this.dataDir);
+    const request = await readJson(paths.requestJson, null);
+    if (!request) {
+      return null;
+    }
+
+    const state = await readJson(paths.stateJson, statusPayload('expired'));
+    if (state?.downloadUuid) {
+      await removeDownloadArtifacts(this.dataDir, state.downloadUuid);
+    }
+
+    const child = this.active.get(requestId);
+    if (child && !child.killed) {
+      child.kill('SIGTERM');
+      await sleep(3000);
+      if (!child.killed) {
+        child.kill('SIGKILL');
+      }
+    }
+
+    this.active.delete(requestId);
+
+    await fs.rm(paths.root, { recursive: true, force: true });
+    this.logger.warn({ event: 'request.invalidated', request_id: requestId }, message);
+    return request;
   }
 
   async cleanupExpired() {

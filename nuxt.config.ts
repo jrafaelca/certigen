@@ -5,8 +5,18 @@ const { version } = require('./package.json')
 
 export default defineNuxtConfig({
   ssr: false,
-  modules: ['@nuxt/ui'],
+  modules: ['@nuxt/ui', '@nuxtjs/i18n'],
   css: ['~/assets/css/main.css'],
+  i18n: {
+    strategy: 'prefix_except_default',
+    defaultLocale: 'en',
+    detectBrowserLanguage: false,
+    locales: [
+      { code: 'en', name: 'English', language: 'en' },
+      { code: 'es', name: 'Español', language: 'es' },
+    ],
+    vueI18n: './i18n.config.ts',
+  },
   app: {
     head: {
       title: process.env.APP_NAME || 'Certigen',
@@ -17,13 +27,11 @@ export default defineNuxtConfig({
     },
   },
   runtimeConfig: {
-    dataDir: process.env.DATA_DIR || '/data',
-    port: process.env.PORT || '3000',
-    appHost: process.env.APP_HOST || '0.0.0.0',
+    dataDir: '/data',
     version,
     requestTtlMinutes: process.env.REQUEST_TTL_MINUTES || '60',
     downloadTtlMinutes: process.env.DOWNLOAD_TTL_MINUTES || '60',
-    downloadMaxCount: process.env.DOWNLOAD_MAX_COUNT || '3',
+    downloadMaxCount: process.env.DOWNLOAD_MAX_COUNT || '1',
     cleanupIntervalMinutes: process.env.CLEANUP_INTERVAL_MINUTES || '15',
     maxConcurrentRequests: process.env.MAX_CONCURRENT_REQUESTS || '3',
     public: {

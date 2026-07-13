@@ -18,18 +18,17 @@ function getState() {
 
 function buildConfig() {
   const runtimeConfig = useRuntimeConfig()
-  const dataDir = runtimeConfig.dataDir || legacyConfig.dataDir
 
   return {
-    dataDir,
+    dataDir: legacyConfig.dataDir,
     version: runtimeConfig.version || legacyConfig.version,
     requestTtlMinutes: toPositiveInt(runtimeConfig.requestTtlMinutes, legacyConfig.requestTtlMinutes),
     downloadTtlMinutes: toPositiveInt(runtimeConfig.downloadTtlMinutes, legacyConfig.downloadTtlMinutes),
     downloadMaxCount: toPositiveInt(runtimeConfig.downloadMaxCount, legacyConfig.downloadMaxCount),
     cleanupIntervalMinutes: toPositiveInt(runtimeConfig.cleanupIntervalMinutes, legacyConfig.cleanupIntervalMinutes),
     maxConcurrentRequests: toPositiveInt(runtimeConfig.maxConcurrentRequests, legacyConfig.maxConcurrentRequests),
-    host: runtimeConfig.appHost || legacyConfig.host,
-    port: toPositiveInt(runtimeConfig.port, legacyConfig.port),
+    host: legacyConfig.host,
+    port: legacyConfig.port,
   }
 }
 

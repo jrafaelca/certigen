@@ -57,6 +57,27 @@ const requestLookupInProgress = ref(false)
 const renewalModalOpen = ref(false)
 const renewalModalRequest = ref(null)
 const renewalModalPayload = ref(null)
+const renewalModalDomains = computed(() => {
+  const requestDomains = renewalModalRequest.value?.domains
+  if (Array.isArray(requestDomains) && requestDomains.length) {
+    return requestDomains
+  }
+
+  const payloadDomains = renewalModalPayload.value?.domains
+  if (typeof payloadDomains === 'string' && payloadDomains.trim()) {
+    return payloadDomains
+      .split(',')
+      .map((domain) => domain.trim())
+      .filter(Boolean)
+  }
+
+  return []
+})
+const renewalModalUpdatedAt = computed(() => renewalModalRequest.value?.updatedAt || '')
+const renewalModalStatus = computed(() => {
+  const status = String(renewalModalRequest.value?.status || 'ready').replace(/_/g, ' ')
+  return status.charAt(0).toUpperCase() + status.slice(1)
+})
 const dnsVerifying = ref(false)
 const requestRefreshTimer = ref(null)
 const dnsRetryTimer = ref(null)
@@ -124,6 +145,7 @@ function buildRequestPayload() {
     wildcard: wizard.wildcard.value,
     certificateAuthority: wizard.certificateAuthority.value,
     resolvers: wizard.resolvers.value,
+    sessionId: wizard.sessionId.value,
   }
 }
 
@@ -199,9 +221,13 @@ async function api(url, options = {}) {
     ...options,
   })
 
-  const payload = await response.json().catch(() => ({}))
+  if (response.status === 204) {
+    return null
+  }
+
+  const payload = await response.json().catch(() => null)
   if (!response.ok) {
-    throw new Error(payload.error || 'The operation could not be completed.')
+    throw new Error(payload?.error || 'The operation could not be completed.')
   }
 
   return payload
@@ -337,7 +363,7 @@ async function handleCreateRequest() {
       body: JSON.stringify(payload),
     })
 
-    if (existing) {
+    if (existing?.requestId) {
       renewalModalRequest.value = existing
       renewalModalPayload.value = payload
       renewalModalOpen.value = true
@@ -369,21 +395,6 @@ function closeRenewalModal() {
   renewalModalPayload.value = null
 }
 
-function continueWithExistingCertificate() {
-  if (!renewalModalRequest.value) return
-
-  const next = renewalModalRequest.value
-  prefillWizardFromRequest(next)
-  closeRenewalModal()
-  stopRequestRefresh()
-  stopDnsVerificationRetry()
-  dnsVerifying.value = false
-  wizard.dnsVerificationAttempted.value = false
-  wizard.requestId.value = next.requestId
-  renderRequest(next)
-  currentStep.value = 3
-}
-
 async function renewWithNewRequest() {
   const sourceRequest = renewalModalRequest.value
   const payload = renewalModalPayload.value || buildRequestPayload()
@@ -399,7 +410,10 @@ async function renewWithNewRequest() {
   wizard.request.value = null
   wizard.banner.value = {message: '', kind: 'info'}
   currentStep.value = 1
-  await submitRequest(payload)
+  await submitRequest({
+    ...payload,
+    renewalRequestId: sourceRequest?.requestId || '',
+  })
 }
 
 async function verifyAll({retry = false} = {}) {
@@ -620,48 +634,42 @@ function downloadCurrentBundle() {
       </div>
     </UPageBody>
 
-    <UModal v-model:open="renewalModalOpen">
-      <UCard :ui="{ body: 'space-y-4', footer: 'justify-end gap-3' }">
-        <div class="space-y-1">
-          <h3 class="text-base font-semibold">Certificate already exists</h3>
-          <p class="text-sm text-muted">
-            We found a valid certificate for the same domain set. You can keep it or create a new request.
-          </p>
-        </div>
-
-        <div class="grid gap-3 text-sm">
-          <div>
+    <UModal
+      v-model:open="renewalModalOpen"
+      title="Certificate already exists"
+      description="We found a valid certificate for the same domain set. Renewing will create a fresh request."
+      :ui="{ content: 'sm:max-w-2xl', footer: 'justify-end gap-3' }"
+      scrollable
+    >
+      <template #body>
+        <div class="grid gap-4 text-sm sm:grid-cols-2">
+          <div class="sm:col-span-2">
             <p class="text-xs font-medium uppercase tracking-wide text-muted">Domains</p>
             <p class="mt-1 break-words font-medium">
-              {{ renewalModalRequest?.domains?.join(', ') || '-' }}
+              {{ renewalModalDomains.length ? renewalModalDomains.join(', ') : '-' }}
             </p>
           </div>
-          <div class="grid gap-3 sm:grid-cols-2">
-            <div>
-              <p class="text-xs font-medium uppercase tracking-wide text-muted">Status</p>
-              <p class="mt-1 font-medium">Ready</p>
-            </div>
-            <div>
-              <p class="text-xs font-medium uppercase tracking-wide text-muted">Updated</p>
-              <p class="mt-1 font-medium">
-                {{ renewalModalRequest?.updatedAt ? new Intl.DateTimeFormat('en', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(renewalModalRequest.updatedAt)) : '-' }}
-              </p>
-            </div>
+          <div>
+            <p class="text-xs font-medium uppercase tracking-wide text-muted">Status</p>
+            <p class="mt-1 font-medium">{{ renewalModalStatus }}</p>
+          </div>
+          <div>
+            <p class="text-xs font-medium uppercase tracking-wide text-muted">Updated</p>
+            <p class="mt-1 font-medium">
+              {{ renewalModalUpdatedAt ? new Intl.DateTimeFormat('en', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(renewalModalUpdatedAt)) : '-' }}
+            </p>
           </div>
         </div>
+      </template>
 
-        <template #footer>
-          <UButton color="neutral" variant="soft" @click="closeRenewalModal">
-            Cancel
-          </UButton>
-          <UButton color="neutral" variant="soft" icon="i-lucide-download" @click="continueWithExistingCertificate">
-            Download existing
-          </UButton>
-          <UButton color="primary" icon="i-lucide-refresh-cw" @click="renewWithNewRequest">
-            Renew
-          </UButton>
-        </template>
-      </UCard>
+      <template #footer>
+        <UButton color="neutral" variant="soft" @click="closeRenewalModal">
+          Cancel
+        </UButton>
+        <UButton color="primary" icon="i-lucide-refresh-cw" @click="renewWithNewRequest">
+          Renew
+        </UButton>
+      </template>
     </UModal>
   </UPage>
 </template>

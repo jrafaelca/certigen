@@ -8,7 +8,7 @@ import {
   normalizeDomainSet,
   sameDomainSet,
 } from '../server/utils/utils.js';
-import { validateDownloadUuid, validateEmail, validateRequestInput } from '../server/utils/validation.js';
+import { validateDownloadUuid, validateEmail, validateRequestInput, validateSessionId } from '../server/utils/validation.js';
 import { parseChallengeDetails } from '../server/utils/certbot.js';
 
 test('normalizes domains with uppercase letters and trailing dot', () => {
@@ -62,6 +62,11 @@ test('validates download UUIDs', () => {
   assert.equal(validateDownloadUuid('not-a-uuid'), false);
 });
 
+test('validates session UUIDs', () => {
+  assert.equal(validateSessionId('3c608c2e-4b48-4655-b2f8-334e7603f6ef'), true);
+  assert.equal(validateSessionId('not-a-session'), false);
+});
+
 test('splits lists separated by commas and newlines', () => {
   assert.deepEqual(parseList('a, b\nc'), ['a', 'b', 'c']);
 });
@@ -75,4 +80,5 @@ test('normalizes and compares domain sets', () => {
 
   assert.equal(sameDomainSet(['example.com', 'www.example.com'], ['www.example.com', 'example.com']), true);
   assert.equal(sameDomainSet(['example.com'], ['example.com', 'www.example.com']), false);
+  assert.equal(sameDomainSet([], ['example.com']), false);
 });
