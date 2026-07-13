@@ -1,4 +1,7 @@
 export function useWizardState() {
+  const sessionId = useState('wizard-session-id', () =>
+    globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+  )
   const requestId = useState('wizard-request-id', () => '')
   const email = useState('wizard-email', () => '')
   const request = useState('wizard-request', () => null)
@@ -36,6 +39,7 @@ export function useWizardState() {
   }
 
   return {
+    sessionId,
     requestId,
     email,
     request,
