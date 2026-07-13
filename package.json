@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
+  "packageManager": "pnpm@10.32.1",
   "description": "Dockerized web app for generating TLS certificates with manual DNS validation.",
   "scripts": {
     "dev": "nuxt dev --host 0.0.0.0",
