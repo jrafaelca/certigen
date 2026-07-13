@@ -53,6 +53,10 @@ const currentStepMeta = computed(() => steps[currentStep.value - 1] || steps[0])
 const currentStepRequest = computed(() => wizard.request.value?.status || '')
 const currentChallengeCount = computed(() => wizard.request.value?.challenges?.length || 0)
 const isDnsRetryable = computed(() => ['failed', 'expired'].includes(currentStepRequest.value))
+const requestLookupInProgress = ref(false)
+const renewalModalOpen = ref(false)
+const renewalModalRequest = ref(null)
+const renewalModalPayload = ref(null)
 const dnsVerifying = ref(false)
 const requestRefreshTimer = ref(null)
 const dnsRetryTimer = ref(null)
@@ -67,8 +71,16 @@ const dnsContinueLabel = computed(() => {
   if (isDnsRetryable.value) return 'Retry'
   return 'Verify'
 })
-const dnsContinueDisabled = computed(() => wizard.submitting.value || dnsVerifying.value || ['issuing', 'packaging'].includes(currentStepRequest.value))
-const dnsContinueLoading = computed(() => dnsVerifying.value || ['issuing', 'packaging'].includes(currentStepRequest.value))
+const dnsContinueDisabled = computed(() =>
+  requestLookupInProgress.value
+  || wizard.submitting.value
+  || dnsVerifying.value
+  || ['issuing', 'packaging'].includes(currentStepRequest.value))
+const dnsContinueLoading = computed(() =>
+  requestLookupInProgress.value
+  || wizard.submitting.value
+  || dnsVerifying.value
+  || ['issuing', 'packaging'].includes(currentStepRequest.value))
 
 const maxAccessibleStep = computed(() => {
   if (!wizard.requestId.value || !wizard.request.value) {
@@ -103,6 +115,24 @@ if (!wizard.requestId.value) {
 
 function setBanner(message, kind = 'info') {
   wizard.banner.value = {message, kind}
+}
+
+function buildRequestPayload() {
+  return {
+    email: wizard.email.value,
+    domains: wizard.domains.value.join(','),
+    wildcard: wizard.wildcard.value,
+    certificateAuthority: wizard.certificateAuthority.value,
+    resolvers: wizard.resolvers.value,
+  }
+}
+
+function prefillWizardFromRequest(nextRequest) {
+  wizard.email.value = nextRequest.email || ''
+  wizard.domains.value = [nextRequest.primaryDomain, ...(nextRequest.additionalDomains || [])].filter(Boolean)
+  wizard.wildcard.value = Boolean(nextRequest.wildcard)
+  wizard.certificateAuthority.value = nextRequest.certificateAuthority || 'letsencrypt'
+  wizard.resolvers.value = Array.isArray(nextRequest.resolvers) ? nextRequest.resolvers.join(', ') : 'system'
 }
 
 function goToStep(step) {
@@ -266,25 +296,7 @@ function scheduleDnsRetry() {
   }, DNS_RETRY_DELAY_MS)
 }
 
-async function submitRequest() {
-  if (!wizard.domains.value.length) {
-    setBanner('Add at least one domain to create the request.', 'warning')
-    return
-  }
-
-  if (!wizard.email.value) {
-    setBanner('Add an email address to continue.', 'warning')
-    return
-  }
-
-  const payload = {
-    email: wizard.email.value,
-    domains: wizard.domains.value.join(','),
-    wildcard: wizard.wildcard.value,
-    certificateAuthority: wizard.certificateAuthority.value,
-    resolvers: wizard.resolvers.value,
-  }
-
+async function submitRequest(payload = buildRequestPayload()) {
   try {
     wizard.submitting.value = true
     wizard.dnsVerificationAttempted.value = false
@@ -305,6 +317,41 @@ async function submitRequest() {
   }
 }
 
+async function handleCreateRequest() {
+  if (!wizard.domains.value.length) {
+    setBanner('Add at least one domain to create the request.', 'warning')
+    return
+  }
+
+  if (!wizard.email.value) {
+    setBanner('Add an email address to continue.', 'warning')
+    return
+  }
+
+  const payload = buildRequestPayload()
+
+  try {
+    requestLookupInProgress.value = true
+    const existing = await api('/api/requests/lookup', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    })
+
+    if (existing) {
+      renewalModalRequest.value = existing
+      renewalModalPayload.value = payload
+      renewalModalOpen.value = true
+      return
+    }
+
+    await submitRequest(payload)
+  } catch (error) {
+    setBanner(error.message, 'error')
+  } finally {
+    requestLookupInProgress.value = false
+  }
+}
+
 function resetCurrentRequest() {
   stopRequestRefresh()
   stopDnsVerificationRetry()
@@ -314,6 +361,45 @@ function resetCurrentRequest() {
   wizard.request.value = null
   wizard.banner.value = {message: '', kind: 'info'}
   currentStep.value = 1
+}
+
+function closeRenewalModal() {
+  renewalModalOpen.value = false
+  renewalModalRequest.value = null
+  renewalModalPayload.value = null
+}
+
+function continueWithExistingCertificate() {
+  if (!renewalModalRequest.value) return
+
+  const next = renewalModalRequest.value
+  prefillWizardFromRequest(next)
+  closeRenewalModal()
+  stopRequestRefresh()
+  stopDnsVerificationRetry()
+  dnsVerifying.value = false
+  wizard.dnsVerificationAttempted.value = false
+  wizard.requestId.value = next.requestId
+  renderRequest(next)
+  currentStep.value = 3
+}
+
+async function renewWithNewRequest() {
+  const sourceRequest = renewalModalRequest.value
+  const payload = renewalModalPayload.value || buildRequestPayload()
+  if (sourceRequest) {
+    prefillWizardFromRequest(sourceRequest)
+  }
+  closeRenewalModal()
+  stopRequestRefresh()
+  stopDnsVerificationRetry()
+  dnsVerifying.value = false
+  wizard.dnsVerificationAttempted.value = false
+  wizard.requestId.value = ''
+  wizard.request.value = null
+  wizard.banner.value = {message: '', kind: 'info'}
+  currentStep.value = 1
+  await submitRequest(payload)
 }
 
 async function verifyAll({retry = false} = {}) {
@@ -481,7 +567,7 @@ function downloadCurrentBundle() {
             <WizardRequestForm
                 v-if="currentStep === 1"
                 ref="requestForm"
-                @submit="submitRequest"
+                @submit="handleCreateRequest"
             />
 
             <WizardDnsChallengeStep
@@ -533,5 +619,49 @@ function downloadCurrentBundle() {
         </UCard>
       </div>
     </UPageBody>
+
+    <UModal v-model:open="renewalModalOpen">
+      <UCard :ui="{ body: 'space-y-4', footer: 'justify-end gap-3' }">
+        <div class="space-y-1">
+          <h3 class="text-base font-semibold">Certificate already exists</h3>
+          <p class="text-sm text-muted">
+            We found a valid certificate for the same domain set. You can keep it or create a new request.
+          </p>
+        </div>
+
+        <div class="grid gap-3 text-sm">
+          <div>
+            <p class="text-xs font-medium uppercase tracking-wide text-muted">Domains</p>
+            <p class="mt-1 break-words font-medium">
+              {{ renewalModalRequest?.domains?.join(', ') || '-' }}
+            </p>
+          </div>
+          <div class="grid gap-3 sm:grid-cols-2">
+            <div>
+              <p class="text-xs font-medium uppercase tracking-wide text-muted">Status</p>
+              <p class="mt-1 font-medium">Ready</p>
+            </div>
+            <div>
+              <p class="text-xs font-medium uppercase tracking-wide text-muted">Updated</p>
+              <p class="mt-1 font-medium">
+                {{ renewalModalRequest?.updatedAt ? new Intl.DateTimeFormat('en', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(renewalModalRequest.updatedAt)) : '-' }}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <template #footer>
+          <UButton color="neutral" variant="soft" @click="closeRenewalModal">
+            Cancel
+          </UButton>
+          <UButton color="neutral" variant="soft" icon="i-lucide-download" @click="continueWithExistingCertificate">
+            Download existing
+          </UButton>
+          <UButton color="primary" icon="i-lucide-refresh-cw" @click="renewWithNewRequest">
+            Renew
+          </UButton>
+        </template>
+      </UCard>
+    </UModal>
   </UPage>
 </template>

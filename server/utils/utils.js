@@ -59,6 +59,21 @@ export function parseList(value) {
     .filter(Boolean);
 }
 
+export function normalizeDomainSet(domains) {
+  return [...new Set(parseList(domains).map((domain) => normalizeDomain(domain)).filter(Boolean))].sort();
+}
+
+export function sameDomainSet(left, right) {
+  const leftSet = normalizeDomainSet(left);
+  const rightSet = normalizeDomainSet(right);
+
+  if (leftSet.length !== rightSet.length) {
+    return false;
+  }
+
+  return leftSet.every((domain, index) => domain === rightSet[index]);
+}
+
 export function toPositiveInt(value, fallback) {
   const number = Number.parseInt(String(value ?? ''), 10);
   return Number.isFinite(number) && number > 0 ? number : fallback;

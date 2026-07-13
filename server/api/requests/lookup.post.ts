@@ -1,0 +1,10 @@
+import { apiHandler } from '../../utils/api'
+import { getRuntime } from '../../utils/runtime'
+
+export default defineEventHandler((event) =>
+  apiHandler(event, async () => {
+    const { manager } = await getRuntime()
+    const body = await readBody(event)
+    return manager.findExistingCertificate(body || {})
+  }),
+)

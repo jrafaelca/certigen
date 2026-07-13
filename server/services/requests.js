@@ -4,7 +4,7 @@ import { randomUUID } from 'node:crypto';
 import { requestPaths } from './paths.js';
 import { ensureDir, readJson, removeIfExists, writeJsonAtomic, pathExists, listFiles } from '../utils/json-store.js';
 import { validateRequestInput, validateDownloadUuid } from '../utils/validation.js';
-import { nowIso, sleep } from '../utils/utils.js';
+import { normalizeDomainSet, nowIso, sameDomainSet, sleep } from '../utils/utils.js';
 import { startCertbotProcess } from './certbot.js';
 import { verifyDnsRecord } from './dns.js';
 import { packageCertificate } from './export.js';
@@ -138,6 +138,45 @@ export class RequestManager {
     await ensureDir(path.join(this.dataDir, 'requests'));
     await ensureDir(path.join(this.dataDir, 'exports'));
     await ensureDir(path.join(this.dataDir, 'downloads'));
+  }
+
+  async findExistingCertificate(payload) {
+    const validation = validateRequestInput(payload);
+    if (!validation.ok) {
+      const error = new Error(validation.errors.join(' '));
+      error.statusCode = 400;
+      throw error;
+    }
+
+    const targetDomains = normalizeDomainSet(validation.value.domains);
+    const requestsDir = path.join(this.dataDir, 'requests');
+    const requestIds = await fs.readdir(requestsDir).catch(() => []);
+    let latestMatch = null;
+
+    for (const requestId of requestIds) {
+      const paths = requestFile(requestId, this.dataDir);
+      const request = await readJson(paths.requestJson, null);
+      if (!request || !sameDomainSet(request.domains, targetDomains)) {
+        continue;
+      }
+
+      const state = await readJson(paths.stateJson, null);
+      if (!state || state.status !== 'ready' || !state.downloadUuid) {
+        continue;
+      }
+
+      const download = await this.refreshDownload(state.downloadUuid);
+      if (!download) {
+        continue;
+      }
+
+      const fullRequest = await this.getRequest(requestId);
+      if (!latestMatch || new Date(fullRequest.updatedAt).getTime() > new Date(latestMatch.updatedAt).getTime()) {
+        latestMatch = fullRequest;
+      }
+    }
+
+    return latestMatch;
   }
 
   async createRequest(payload) {

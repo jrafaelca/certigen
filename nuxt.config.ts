@@ -1,3 +1,8 @@
+import { createRequire } from 'node:module'
+
+const require = createRequire(import.meta.url)
+const { version } = require('./package.json')
+
 export default defineNuxtConfig({
   ssr: false,
   modules: ['@nuxt/ui'],
@@ -15,7 +20,7 @@ export default defineNuxtConfig({
     dataDir: process.env.DATA_DIR || '/data',
     port: process.env.PORT || '3000',
     appHost: process.env.APP_HOST || '0.0.0.0',
-    version: process.env.APP_VERSION || '1.0.0',
+    version,
     requestTtlMinutes: process.env.REQUEST_TTL_MINUTES || '60',
     downloadTtlMinutes: process.env.DOWNLOAD_TTL_MINUTES || '60',
     downloadMaxCount: process.env.DOWNLOAD_MAX_COUNT || '3',

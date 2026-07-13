@@ -1,9 +1,13 @@
+import { createRequire } from 'node:module';
 import { toPositiveInt } from './utils.js';
+
+const require = createRequire(import.meta.url);
+const { version } = require('../../package.json');
 
 export const config = {
   port: toPositiveInt(process.env.PORT, 3000),
   host: process.env.APP_HOST || '0.0.0.0',
-  version: process.env.APP_VERSION || '1.0.0',
+  version,
   dataDir: process.env.DATA_DIR || '/data',
   requestTtlMinutes: toPositiveInt(process.env.REQUEST_TTL_MINUTES, 60),
   downloadTtlMinutes: toPositiveInt(process.env.DOWNLOAD_TTL_MINUTES, 60),

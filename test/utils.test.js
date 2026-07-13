@@ -5,6 +5,8 @@ import {
   flattenTxtAnswers,
   normalizeDomain,
   parseList,
+  normalizeDomainSet,
+  sameDomainSet,
 } from '../server/utils/utils.js';
 import { validateDownloadUuid, validateEmail, validateRequestInput } from '../server/utils/validation.js';
 import { parseChallengeDetails } from '../server/utils/certbot.js';
@@ -62,4 +64,15 @@ test('validates download UUIDs', () => {
 
 test('splits lists separated by commas and newlines', () => {
   assert.deepEqual(parseList('a, b\nc'), ['a', 'b', 'c']);
+});
+
+test('normalizes and compares domain sets', () => {
+  assert.deepEqual(normalizeDomainSet(['WWW.Example.com.', 'example.com', '*.Example.com']), [
+    '*.example.com',
+    'example.com',
+    'www.example.com',
+  ]);
+
+  assert.equal(sameDomainSet(['example.com', 'www.example.com'], ['www.example.com', 'example.com']), true);
+  assert.equal(sameDomainSet(['example.com'], ['example.com', 'www.example.com']), false);
 });
