@@ -5,8 +5,13 @@ const { version } = require('./package.json')
 
 export default defineNuxtConfig({
   ssr: false,
-  modules: ['@nuxt/ui', '@nuxtjs/i18n'],
+  modules: ['@nuxt/ui', '@nuxtjs/i18n', '@vueuse/nuxt'],
   css: ['~/assets/css/main.css'],
+  vite: {
+    optimizeDeps: {
+      include: ['zod'],
+    },
+  },
   i18n: {
     strategy: 'prefix_except_default',
     defaultLocale: 'en',
@@ -15,7 +20,6 @@ export default defineNuxtConfig({
       { code: 'en', name: 'English', language: 'en' },
       { code: 'es', name: 'Español', language: 'es' },
     ],
-    vueI18n: './i18n.config.ts',
   },
   app: {
     head: {

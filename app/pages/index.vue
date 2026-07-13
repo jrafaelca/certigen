@@ -2,6 +2,7 @@
 import {computed, onBeforeUnmount, onMounted, ref, useTemplateRef} from 'vue'
 
 const { public: { appName } } = useRuntimeConfig()
+const { t, locale } = useI18n()
 
 useHead({
   title: appName,
@@ -10,6 +11,18 @@ useHead({
 const wizard = useWizardState()
 const requestForm = useTemplateRef('requestForm')
 const currentStep = ref(1)
+const statusLabels = {
+  pending: 'common.status.pending',
+  starting: 'common.status.starting',
+  waiting_dns: 'common.status.waitingDns',
+  checking_dns: 'common.status.checkingDns',
+  issuing: 'common.status.issuing',
+  packaging: 'common.status.packaging',
+  ready: 'common.status.ready',
+  failed: 'common.status.failed',
+  cancelled: 'common.status.cancelled',
+  expired: 'common.status.expired',
+}
 const stepperIndex = computed({
   get: () => currentStep.value - 1,
   set: (value) => {
@@ -18,29 +31,29 @@ const stepperIndex = computed({
 })
 const activeStatuses = new Set(['pending', 'starting', 'waiting_dns', 'checking_dns', 'issuing', 'packaging'])
 
-const steps = [
+const steps = computed(() => [
   {
     id: 1,
-    label: 'Request',
-    caption: 'Set up the request.',
+    label: t('request.steps.settings.title'),
+    caption: t('request.steps.settings.caption'),
     icon: 'i-lucide-clipboard-list',
   },
   {
     id: 2,
-    label: 'DNS record',
-    caption: 'Create and verify.',
+    label: t('request.steps.dnsRecord.title'),
+    caption: t('request.steps.dnsRecord.caption'),
     icon: 'i-lucide-globe',
   },
   {
     id: 3,
-    label: 'Certificates',
-    caption: 'Your generated bundle.',
+    label: t('request.steps.certificates.title'),
+    caption: t('request.steps.certificates.caption'),
     icon: 'i-lucide-download',
   },
-]
+])
 
 const stepItems = computed(() =>
-    steps.map((step) => ({
+    steps.value.map((step) => ({
       value: step.id,
       title: step.label,
       description: step.caption,
@@ -49,7 +62,7 @@ const stepItems = computed(() =>
     })),
 )
 
-const currentStepMeta = computed(() => steps[currentStep.value - 1] || steps[0])
+const currentStepMeta = computed(() => steps.value[currentStep.value - 1] || steps.value[0])
 const currentStepRequest = computed(() => wizard.request.value?.status || '')
 const currentChallengeCount = computed(() => wizard.request.value?.challenges?.length || 0)
 const isDnsRetryable = computed(() => ['failed', 'expired'].includes(currentStepRequest.value))
@@ -75,8 +88,8 @@ const renewalModalDomains = computed(() => {
 })
 const renewalModalUpdatedAt = computed(() => renewalModalRequest.value?.updatedAt || '')
 const renewalModalStatus = computed(() => {
-  const status = String(renewalModalRequest.value?.status || 'ready').replace(/_/g, ' ')
-  return status.charAt(0).toUpperCase() + status.slice(1)
+  const status = renewalModalRequest.value?.status || 'ready'
+  return t(statusLabels[status] || 'common.status.ready')
 })
 const dnsVerifying = ref(false)
 const requestRefreshTimer = ref(null)
@@ -85,12 +98,12 @@ const dnsRetryStartedAt = ref(0)
 const DNS_RETRY_DELAY_MS = 5000
 const DNS_RETRY_TIMEOUT_MS = 60000
 const dnsContinueLabel = computed(() => {
-  if (currentStep.value === 1) return 'Create request'
-  if (currentStep.value !== 2) return 'Continue'
-  if (['issuing', 'packaging'].includes(currentStepRequest.value)) return 'Preparing bundle...'
-  if (dnsVerifying.value) return isDnsRetryable.value ? 'Retrying...' : 'Checking DNS...'
-  if (isDnsRetryable.value) return 'Retry'
-  return 'Verify'
+  if (currentStep.value === 1) return t('common.actions.createRequest')
+  if (currentStep.value !== 2) return t('common.actions.continue')
+  if (['issuing', 'packaging'].includes(currentStepRequest.value)) return t('dns.actions.preparingBundle')
+  if (dnsVerifying.value) return isDnsRetryable.value ? t('dns.actions.retrying') : t('dns.actions.checkingDns')
+  if (isDnsRetryable.value) return t('common.actions.retry')
+  return t('common.actions.verify')
 })
 const dnsContinueDisabled = computed(() =>
   requestLookupInProgress.value
@@ -138,6 +151,18 @@ function setBanner(message, kind = 'info') {
   wizard.banner.value = {message, kind}
 }
 
+function normalizeServerMessage(message) {
+  const normalizedMessage = String(message || '').trim()
+
+  const translations = {
+    'The TXT record is not visible yet.': t('dns.alerts.notVisibleYet'),
+    'Certificate ready for download.': t('request.banner.ready'),
+    'The operation could not be completed.': t('common.errors.operationFailed'),
+  }
+
+  return translations[normalizedMessage] || normalizedMessage
+}
+
 function buildRequestPayload() {
   return {
     email: wizard.email.value,
@@ -175,7 +200,7 @@ function renderRequest(nextRequest) {
   }
 
   const statusMessages = {
-    ready: 'Certificate ready for download.',
+    ready: t('request.banner.ready'),
   }
 
   wizard.banner.value = {
@@ -227,7 +252,7 @@ async function api(url, options = {}) {
 
   const payload = await response.json().catch(() => null)
   if (!response.ok) {
-    throw new Error(payload?.error || 'The operation could not be completed.')
+    throw new Error(normalizeServerMessage(payload?.error || t('common.errors.operationFailed')))
   }
 
   return payload
@@ -292,7 +317,7 @@ function startRequestRefresh() {
       await refreshRequest()
     } catch (error) {
       stopRequestRefresh()
-      setBanner(error.message, 'error')
+      setBanner(normalizeServerMessage(error.message), 'error')
     }
   }, 2000)
 }
@@ -337,7 +362,7 @@ async function submitRequest(payload = buildRequestPayload()) {
     await refreshRequest()
     startRequestRefresh()
   } catch (error) {
-    setBanner(error.message, 'error')
+    setBanner(normalizeServerMessage(error.message), 'error')
   } finally {
     wizard.submitting.value = false
   }
@@ -345,12 +370,12 @@ async function submitRequest(payload = buildRequestPayload()) {
 
 async function handleCreateRequest() {
   if (!wizard.domains.value.length) {
-    setBanner('Add at least one domain to create the request.', 'warning')
+    setBanner(t('request.banner.addDomain'), 'warning')
     return
   }
 
   if (!wizard.email.value) {
-    setBanner('Add an email address to continue.', 'warning')
+    setBanner(t('request.banner.addEmail'), 'warning')
     return
   }
 
@@ -372,7 +397,7 @@ async function handleCreateRequest() {
 
     await submitRequest(payload)
   } catch (error) {
-    setBanner(error.message, 'error')
+    setBanner(normalizeServerMessage(error.message), 'error')
   } finally {
     requestLookupInProgress.value = false
   }
@@ -458,7 +483,7 @@ async function verifyAll({retry = false} = {}) {
   } catch (error) {
     stopDnsVerificationRetry()
     wizard.dnsVerificationAttempted.value = retry
-    setBanner(error.message, 'error')
+    setBanner(normalizeServerMessage(error.message), 'error')
     throw error
   } finally {
     if (!dnsRetryTimer.value) {
@@ -532,14 +557,14 @@ function onStepChange(step) {
 
 const downloadButtonLabel = computed(() => {
   if (wizard.request.value?.downloadUuid) {
-    return 'Download ZIP'
+    return t('certificates.actions.downloadZip')
   }
 
   if (['issuing', 'packaging'].includes(currentStepRequest.value)) {
-    return 'Preparing bundle...'
+    return t('dns.actions.preparingBundle')
   }
 
-  return 'Download ZIP'
+  return t('certificates.actions.downloadZip')
 })
 
 const downloadButtonDisabled = computed(() => !wizard.request.value?.downloadUuid)
@@ -549,6 +574,20 @@ function downloadCurrentBundle() {
   if (!downloadUuid) return
 
   window.location.href = `/api/download/${downloadUuid}`
+}
+
+function formatDate(value) {
+  if (!value) return t('common.noData')
+
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) {
+    return value
+  }
+
+  return new Intl.DateTimeFormat(locale.value, {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  }).format(date)
 }
 </script>
 
@@ -603,7 +642,7 @@ function downloadCurrentBundle() {
                   icon="i-lucide-arrow-left"
                   @click="resetCurrentRequest"
               >
-                Back
+                {{ t('common.actions.back') }}
               </UButton>
               <UButton
                   v-if="currentStep === 3"
@@ -636,27 +675,27 @@ function downloadCurrentBundle() {
 
     <UModal
       v-model:open="renewalModalOpen"
-      title="Certificate already exists"
-      description="We found a valid certificate for the same domain set. Renewing will create a fresh request."
+      :title="t('request.modal.title')"
+      :description="t('request.modal.description')"
       :ui="{ content: 'sm:max-w-2xl', footer: 'justify-end gap-3' }"
       scrollable
     >
       <template #body>
         <div class="grid gap-4 text-sm sm:grid-cols-2">
           <div class="sm:col-span-2">
-            <p class="text-xs font-medium uppercase tracking-wide text-muted">Domains</p>
+            <p class="text-xs font-medium uppercase tracking-wide text-muted">{{ t('request.modal.domains') }}</p>
             <p class="mt-1 break-words font-medium">
-              {{ renewalModalDomains.length ? renewalModalDomains.join(', ') : '-' }}
+              {{ renewalModalDomains.length ? renewalModalDomains.join(', ') : t('common.noData') }}
             </p>
           </div>
           <div>
-            <p class="text-xs font-medium uppercase tracking-wide text-muted">Status</p>
+            <p class="text-xs font-medium uppercase tracking-wide text-muted">{{ t('request.modal.status') }}</p>
             <p class="mt-1 font-medium">{{ renewalModalStatus }}</p>
           </div>
           <div>
-            <p class="text-xs font-medium uppercase tracking-wide text-muted">Updated</p>
+            <p class="text-xs font-medium uppercase tracking-wide text-muted">{{ t('request.modal.updated') }}</p>
             <p class="mt-1 font-medium">
-              {{ renewalModalUpdatedAt ? new Intl.DateTimeFormat('en', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(renewalModalUpdatedAt)) : '-' }}
+              {{ formatDate(renewalModalUpdatedAt) }}
             </p>
           </div>
         </div>
@@ -664,10 +703,10 @@ function downloadCurrentBundle() {
 
       <template #footer>
         <UButton color="neutral" variant="soft" @click="closeRenewalModal">
-          Cancel
+          {{ t('request.modal.actions.cancel') }}
         </UButton>
         <UButton color="primary" icon="i-lucide-refresh-cw" @click="renewWithNewRequest">
-          Renew
+          {{ t('request.modal.actions.renew') }}
         </UButton>
       </template>
     </UModal>

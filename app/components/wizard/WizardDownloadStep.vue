@@ -1,18 +1,18 @@
 <script setup>
 import { computed } from 'vue'
-import { useClipboard } from '@vueuse/core'
 
 const wizard = useWizardState()
 const { request, activeExample } = wizard
+const { t, locale } = useI18n()
 const { copy, copied } = useClipboard()
 
-const tabs = [
-  { label: 'Nginx', value: 'nginx' },
-  { label: 'Apache', value: 'apache' },
-  { label: 'HAProxy', value: 'haproxy' },
-  { label: 'Node.js', value: 'nodejs' },
-  { label: 'Docker', value: 'compose' },
-]
+const tabs = computed(() => [
+  { label: t('certificates.examples.tabs.nginx'), value: 'nginx' },
+  { label: t('certificates.examples.tabs.apache'), value: 'apache' },
+  { label: t('certificates.examples.tabs.haproxy'), value: 'haproxy' },
+  { label: t('certificates.examples.tabs.nodejs'), value: 'nodejs' },
+  { label: t('certificates.examples.tabs.docker'), value: 'compose' },
+])
 
 const examples = {
   nginx: `server {
@@ -49,26 +49,27 @@ const server = https.createServer({
       - ./certificates/private-key.pem:/etc/nginx/certs/private-key.pem:ro`,
 }
 
+function formatDate(value) {
+  if (!value) return t('common.noData')
+
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) {
+    return value
+  }
+
+  return new Intl.DateTimeFormat(locale.value, {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  }).format(date)
+}
+
 const bundleDetails = computed(() => {
   if (!request.value) return []
 
-  const formatDate = (value) => {
-    if (!value) return '-'
-
-    const date = new Date(value)
-    if (Number.isNaN(date.getTime())) {
-      return value
-    }
-
-    return new Intl.DateTimeFormat('en', {
-      dateStyle: 'medium',
-      timeStyle: 'short',
-    }).format(date)
-  }
-
   return [
-    { label: 'Issued at', value: formatDate(request.value.issuedAt), span: 'sm:col-span-1' },
-    { label: 'Expires at', value: formatDate(request.value.expiresAt), span: 'sm:col-span-1' },
+    { label: t('certificates.details.issuedAt'), value: formatDate(request.value.issuedAt), span: 'sm:col-span-1' },
+    { label: t('certificates.details.expiresAt'), value: formatDate(request.value.expiresAt), span: 'sm:col-span-1' },
+    { label: t('certificates.details.sha256Fingerprint'), value: request.value.fingerprintSha256 || t('common.noData'), span: 'sm:col-span-2' },
   ]
 })
 
@@ -86,18 +87,14 @@ async function copyExample() {
         <p class="text-xs font-medium uppercase tracking-wide text-muted">{{ item.label }}</p>
         <p class="mt-1 break-words text-sm font-medium">{{ item.value }}</p>
       </div>
-      <div class="sm:col-span-2">
-        <p class="text-xs font-medium uppercase tracking-wide text-muted">SHA-256 fingerprint</p>
-        <p class="mt-1 break-words text-sm font-medium">{{ request?.fingerprintSha256 || '-' }}</p>
-      </div>
     </div>
 
     <USeparator />
 
     <div class="flex h-full min-h-0 flex-col gap-3 overflow-hidden">
       <div class="flex flex-col gap-1">
-        <h4 class="text-sm font-semibold">Installation examples</h4>
-        <p class="text-xs text-muted">Use the snippet that matches your stack.</p>
+        <h4 class="text-sm font-semibold">{{ t('certificates.examples.title') }}</h4>
+        <p class="text-xs text-muted">{{ t('certificates.examples.description') }}</p>
       </div>
 
       <UTabs
@@ -115,10 +112,10 @@ async function copyExample() {
           variant="soft"
           size="xs"
           :icon="copied ? 'i-lucide-copy-check' : 'i-lucide-copy'"
+          :aria-label="t('certificates.actions.copySnippet')"
           @click="copyExample"
-        >
-        </UButton>
-        <pre class="min-h-0 overflow-auto px-4 py-3 font-mono text-[10px] leading-5 text-neutral-300">{{ currentExample }}</pre>
+        />
+        <pre class="m-0 max-h-80 overflow-auto px-4 py-3 font-mono text-[11px] leading-5 text-neutral-300">{{ currentExample }}</pre>
       </div>
     </div>
   </div>

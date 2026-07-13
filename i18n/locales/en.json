@@ -32,7 +32,12 @@
     }
   },
   "header": {
-    "github": "Open on GitHub"
+    "github": "Open on GitHub",
+    "language": "Change language",
+    "locales": {
+      "en": "English",
+      "es": "Spanish"
+    }
   },
   "footer": {
     "copyright": "Copyright © {year}",
@@ -56,7 +61,7 @@
     "form": {
       "email": {
         "label": "Email address",
-        "placeholder": "you@your-domain.com",
+        "placeholder": "you{at}your-domain.com",
         "hint": "Used for ACME account notices."
       },
       "authority": {
@@ -73,6 +78,14 @@
       },
       "wildcard": {
         "label": "Include wildcard coverage"
+      },
+      "advanced": {
+        "title": "Advanced options",
+        "wildcard": "Wildcard",
+        "authority": "Certificate authority",
+        "resolvers": "DNS resolvers",
+        "resolversHint": "Leave the default system resolver unless you need to avoid local caching.",
+        "resolversPlaceholder": "system, 1.1.1.1, 8.8.8.8"
       },
       "validation": {
         "email": "Enter a valid email address.",

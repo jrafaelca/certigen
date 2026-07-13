@@ -1,0 +1,171 @@
+{
+  "common": {
+    "actions": {
+      "back": "Volver",
+      "cancel": "Cancelar",
+      "continue": "Continuar",
+      "copy": "Copiar",
+      "createRequest": "Crear solicitud",
+      "downloadZip": "Descargar ZIP",
+      "openGitHub": "Abrir en GitHub",
+      "renew": "Renovar",
+      "retry": "Reintentar",
+      "useExisting": "Usar existente",
+      "verify": "Verificar"
+    },
+    "errors": {
+      "operationFailed": "No se pudo completar la operación."
+    },
+    "noData": "-",
+    "status": {
+      "pending": "Pendiente",
+      "starting": "Iniciando",
+      "waitingDns": "Esperando DNS",
+      "checkingDns": "Verificando DNS",
+      "issuing": "Emitiendo",
+      "packaging": "Empaquetando",
+      "ready": "Listo",
+      "failed": "Falló",
+      "cancelled": "Cancelado",
+      "expired": "Expirado",
+      "retryRequired": "Reintento requerido"
+    }
+  },
+  "header": {
+    "github": "Abrir en GitHub",
+    "language": "Cambiar idioma",
+    "locales": {
+      "en": "Inglés",
+      "es": "Español"
+    }
+  },
+  "footer": {
+    "copyright": "Copyright © {year}",
+    "certbot": "Certbot"
+  },
+  "request": {
+    "steps": {
+      "settings": {
+        "title": "Solicitud",
+        "caption": "Configura la solicitud."
+      },
+      "dnsRecord": {
+        "title": "Registro DNS",
+        "caption": "Crear y verificar."
+      },
+      "certificates": {
+        "title": "Certificados",
+        "caption": "Tu paquete generado."
+      }
+    },
+    "form": {
+      "email": {
+        "label": "Correo electrónico",
+        "placeholder": "tu{at}tu-dominio.com",
+        "hint": "Se usa para avisos de la cuenta ACME."
+      },
+      "authority": {
+        "label": "Autoridad certificadora",
+        "options": {
+          "letsencrypt": "Let’s Encrypt",
+          "zerossl": "ZeroSSL"
+        }
+      },
+      "domains": {
+        "label": "Dominios",
+        "placeholder": "example.com, www.example.com",
+        "hint": "Ingresa dominios separados por comas. El primero será el principal."
+      },
+      "wildcard": {
+        "label": "Incluir cobertura wildcard"
+      },
+      "advanced": {
+        "title": "Opciones avanzadas",
+        "wildcard": "Wildcard",
+        "authority": "Autoridad certificadora",
+        "resolvers": "Resolutores DNS",
+        "resolversHint": "Deja el resolutor del sistema salvo que necesites evitar caché local.",
+        "resolversPlaceholder": "system, 1.1.1.1, 8.8.8.8"
+      },
+      "validation": {
+        "email": "Ingresa un correo válido.",
+        "authority": "Selecciona una autoridad certificadora compatible.",
+        "domains": "Ingresa nombres de dominio válidos.",
+        "atLeastOne": "Agrega al menos un dominio."
+      }
+    },
+    "banner": {
+      "addDomain": "Agrega al menos un dominio para crear la solicitud.",
+      "addEmail": "Agrega un correo para continuar.",
+      "ready": "Certificado listo para descargar."
+    },
+    "modal": {
+      "title": "El certificado ya existe",
+      "description": "Encontramos un certificado válido para el mismo conjunto de dominios. Renovar creará una nueva solicitud.",
+      "domains": "Dominios",
+      "status": "Estado",
+      "updated": "Actualizado",
+      "actions": {
+        "cancel": "Cancelar",
+        "continue": "Continuar",
+        "renew": "Renovar"
+      }
+    }
+  },
+  "dns": {
+    "title": "Registro DNS",
+    "description": "Crear y verificar.",
+    "details": {
+      "domains": "Dominios",
+      "expiresIn": "Expira en",
+      "certificateAuthority": "CA",
+      "status": "Estado",
+      "updated": "Actualizado"
+    },
+    "alerts": {
+      "preparingTitle": "Preparando el registro DNS",
+      "preparingBody": "Certbot está generando los valores TXT. Aparecerán aquí en cuanto estén listos.",
+      "waitingTitle": "Verificando registros DNS",
+      "waitingBody": "Esperando propagación. Esto puede tardar hasta 60 segundos.",
+      "notVisibleYet": "El registro TXT aún no es visible."
+    },
+    "record": {
+      "name": "Nombre del registro",
+      "value": "Contenido del registro",
+      "copy": "Copiar al portapapeles",
+      "copyName": "Copiar nombre del registro",
+      "copyValue": "Copiar contenido del registro"
+    },
+    "actions": {
+      "verify": "Verificar",
+      "retry": "Reintentar",
+      "retrying": "Reintentando...",
+      "checkingDns": "Verificando DNS...",
+      "preparingBundle": "Preparando paquete..."
+    }
+  },
+  "certificates": {
+    "title": "Certificados",
+    "description": "Tu paquete generado.",
+    "details": {
+      "issuedAt": "Emitido en",
+      "expiresAt": "Expira en",
+      "sha256Fingerprint": "Huella SHA-256"
+    },
+    "examples": {
+      "title": "Ejemplos de instalación",
+      "description": "Usa el snippet que coincida con tu stack.",
+      "tabs": {
+        "nginx": "Nginx",
+        "apache": "Apache",
+        "haproxy": "HAProxy",
+        "nodejs": "Node.js",
+        "docker": "Docker"
+      }
+    },
+    "actions": {
+      "downloadZip": "Descargar ZIP",
+      "copySnippet": "Copiar snippet"
+    }
+  }
+}

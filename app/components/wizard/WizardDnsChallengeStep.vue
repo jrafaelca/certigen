@@ -1,6 +1,5 @@
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
-import { useClipboard } from '@vueuse/core'
 
 const props = defineProps({
   isVerifying: {
@@ -11,6 +10,8 @@ const props = defineProps({
 
 const wizard = useWizardState()
 const { request } = wizard
+const { t, locale } = useI18n()
+
 const requestStatus = computed(() => request.value?.status || 'pending')
 const challengeCount = computed(() => request.value?.challenges?.length || 0)
 const isPreparing = computed(() => ['pending', 'starting'].includes(requestStatus.value) && challengeCount.value === 0)
@@ -20,64 +21,70 @@ const dnsRecordHasError = computed(() =>
 const dnsRecordError = computed(() => {
   if (!dnsRecordHasError.value) return ''
 
-  return request.value?.error || request.value?.message || 'The TXT record is not visible yet.'
+  return request.value?.error || request.value?.message || t('dns.alerts.notVisibleYet')
 })
+
+const statusLabels = {
+  pending: 'common.status.pending',
+  starting: 'common.status.starting',
+  waiting_dns: 'common.status.waitingDns',
+  checking_dns: 'common.status.checkingDns',
+  issuing: 'common.status.issuing',
+  packaging: 'common.status.packaging',
+  ready: 'common.status.ready',
+  failed: 'common.status.failed',
+  cancelled: 'common.status.cancelled',
+  expired: 'common.status.expired',
+}
+
+function prettyStatus(status) {
+  return t(statusLabels[status] || 'common.status.pending')
+}
+
+function formatDate(value) {
+  if (!value) return t('common.noData')
+
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) {
+    return value
+  }
+
+  return new Intl.DateTimeFormat(locale.value, {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  }).format(date)
+}
+
+function formatCountdown(value) {
+  if (value === null) return t('common.noData')
+  const minutes = Math.floor(value / 60)
+  const seconds = String(value % 60).padStart(2, '0')
+  return `${minutes}:${seconds}`
+}
 
 const requestDetails = computed(() => {
   if (!request.value) return []
 
-  const prettyStatus = (status) => {
-    const labels = {
-      pending: 'Pending',
-      starting: 'Starting',
-      waiting_dns: 'Waiting for DNS',
-      checking_dns: 'Checking DNS',
-      issuing: 'Issuing',
-      packaging: 'Packaging',
-      ready: 'Ready',
-      failed: 'Failed',
-      cancelled: 'Cancelled',
-      expired: 'Expired',
-    }
-
-    return labels[status] || status
-  }
-
-  const formatDate = (value) => {
-    if (!value) return '-'
-
-    const date = new Date(value)
-    if (Number.isNaN(date.getTime())) {
-      return value
-    }
-
-    return new Intl.DateTimeFormat('en', {
-      dateStyle: 'medium',
-      timeStyle: 'short',
-    }).format(date)
-  }
-
-  const formatCountdown = (value) => {
-    if (value === null) return '-'
-    const minutes = Math.floor(value / 60)
-    const seconds = String(value % 60).padStart(2, '0')
-    return `${minutes}:${seconds}`
-  }
-
   const expiresLabel = () => {
     if (request.value.status === 'waiting_dns' && secondsRemaining.value === 0) {
-      return 'Retry required'
+      return t('common.status.retryRequired')
     }
 
-    return secondsRemaining.value === null ? '-' : formatCountdown(secondsRemaining.value)
+    return secondsRemaining.value === null ? t('common.noData') : formatCountdown(secondsRemaining.value)
   }
 
   return [
-    { label: 'Domains', value: request.value.domains?.join(', ') || '-', span: 'sm:col-span-2' },
-    { label: 'Expires in', value: expiresLabel(), badge: true, span: 'sm:col-span-1' },
-    { label: 'CA', value: request.value.certificateAuthority === 'zerossl' ? 'ZeroSSL' : "Let's Encrypt", span: 'sm:col-span-1' },
-    { label: 'Status', value: prettyStatus(request.value.status), span: 'sm:col-span-1' },
-    { label: 'Updated', value: formatDate(request.value.updatedAt), span: 'sm:col-span-1' },
+    { label: t('dns.details.domains'), value: request.value.domains?.join(', ') || t('common.noData'), span: 'sm:col-span-2' },
+    { label: t('dns.details.expiresIn'), value: expiresLabel(), badge: true, span: 'sm:col-span-1' },
+    {
+      label: t('dns.details.certificateAuthority'),
+      value: request.value.certificateAuthority === 'zerossl'
+        ? t('request.form.authority.options.zerossl')
+        : t('request.form.authority.options.letsencrypt'),
+      span: 'sm:col-span-1',
+    },
+    { label: t('dns.details.status'), value: prettyStatus(request.value.status), span: 'sm:col-span-1' },
+    { label: t('dns.details.updated'), value: formatDate(request.value.updatedAt), span: 'sm:col-span-1' },
   ]
 })
 
@@ -132,7 +139,6 @@ onMounted(() => {
 onBeforeUnmount(() => {
   clearInterval(countdownTimer)
 })
-
 </script>
 
 <template>
@@ -180,7 +186,7 @@ onBeforeUnmount(() => {
       <div v-for="challenge in request?.challenges || []" :key="challenge.id" class="grid gap-3">
         <div class="grid gap-2">
           <UFormField
-            label="Record name"
+            :label="t('dns.record.name')"
             :ui="{ label: 'text-xs font-medium uppercase tracking-wide text-muted' }"
           >
             <UInput
@@ -191,21 +197,22 @@ onBeforeUnmount(() => {
               :color="dnsRecordHasError ? 'error' : 'neutral'"
             >
               <template #trailing>
-                <UTooltip text="Copy to clipboard" :content="{ side: 'right' }">
+                <UTooltip :text="t('dns.record.copy')" :content="{ side: 'right' }">
                   <UButton
                     :color="copied && copiedField === `${challenge.id}-name` ? 'success' : 'neutral'"
                     variant="link"
                     size="sm"
                     :icon="copied && copiedField === `${challenge.id}-name` ? 'i-lucide-copy-check' : 'i-lucide-copy'"
-                    aria-label="Copy record name"
+                    :aria-label="t('dns.record.copyName')"
                     @click="copyChallengeValue(challenge.recordName, `${challenge.id}-name`)"
                   />
                 </UTooltip>
               </template>
             </UInput>
           </UFormField>
+
           <UFormField
-            label="Record content"
+            :label="t('dns.record.value')"
             :ui="{ label: 'text-xs font-medium uppercase tracking-wide text-muted' }"
           >
             <UInput
@@ -216,13 +223,13 @@ onBeforeUnmount(() => {
               :color="dnsRecordHasError ? 'error' : 'neutral'"
             >
               <template #trailing>
-                <UTooltip text="Copy to clipboard" :content="{ side: 'right' }">
+                <UTooltip :text="t('dns.record.copy')" :content="{ side: 'right' }">
                   <UButton
                     :color="copied && copiedField === `${challenge.id}-value` ? 'success' : 'neutral'"
                     variant="link"
                     size="sm"
                     :icon="copied && copiedField === `${challenge.id}-value` ? 'i-lucide-copy-check' : 'i-lucide-copy'"
-                    aria-label="Copy record value"
+                    :aria-label="t('dns.record.copyValue')"
                     @click="copyChallengeValue(challenge.recordValue, `${challenge.id}-value`)"
                   />
                 </UTooltip>
@@ -232,6 +239,5 @@ onBeforeUnmount(() => {
         </div>
       </div>
     </div>
-
   </div>
 </template>

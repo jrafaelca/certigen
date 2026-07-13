@@ -17,7 +17,8 @@ FROM base AS deps
 RUN pnpm install --frozen-lockfile
 
 FROM deps AS development
-ENV NODE_ENV=development
+ENV NODE_ENV=development \
+    CI=true
 EXPOSE 3000
 CMD ["pnpm", "dev"]
 

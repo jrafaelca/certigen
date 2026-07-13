@@ -6,6 +6,7 @@ const { email, domains, wildcard, certificateAuthority } = useWizardState()
 const wizard = useWizardState()
 const form = useTemplateRef('form')
 const emit = defineEmits(['submit'])
+const { t } = useI18n()
 
 const domainPattern = /^(?:\*\.)?(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/i
 const domainsInput = ref('')
@@ -17,12 +18,12 @@ function parseDomainInput(value) {
     .filter(Boolean)
 }
 
-const schema = z.object({
-  email: z.string().trim().email('Enter a valid email address.'),
-  certificateAuthority: z.literal('letsencrypt', { error: 'Select a supported certificate authority.' }),
-  domains: z.array(z.string().trim().regex(domainPattern, 'Enter valid domain names.')).min(1, 'Add at least one domain.'),
+const schema = computed(() => z.object({
+  email: z.string().trim().email(t('request.form.validation.email')),
+  certificateAuthority: z.literal('letsencrypt', { error: t('request.form.validation.authority') }),
+  domains: z.array(z.string().trim().regex(domainPattern, t('request.form.validation.domains'))).min(1, t('request.form.validation.atLeastOne')),
   wildcard: z.boolean(),
-})
+}))
 
 const formState = computed(() => ({
   email: email.value,
@@ -63,26 +64,31 @@ defineExpose({ validateAndSubmit })
 <template>
   <UForm ref="form" :schema="schema" :state="formState" :validate-on="['blur', 'change']">
     <div class="grid gap-4 lg:grid-cols-2">
-      <UFormField name="email" label="Email address" help="Used for ACME account notices.">
-        <UInput v-model="email" class="w-full" type="email" placeholder="you@your-domain.com" />
+      <UFormField name="email" :label="t('request.form.email.label')" :help="t('request.form.email.hint')">
+        <UInput
+          v-model="email"
+          class="w-full"
+          type="email"
+          :placeholder="t('request.form.email.placeholder', { at: '@' })"
+        />
       </UFormField>
 
-      <UFormField name="certificateAuthority" label="Certificate authority">
+      <UFormField name="certificateAuthority" :label="t('request.form.authority.label')">
         <USelect
           v-model="certificateAuthority"
           class="w-full"
           :options="[
-            { label: 'Let’s Encrypt', value: 'letsencrypt' },
-            { label: 'ZeroSSL', value: 'zerossl' },
+            { label: t('request.form.authority.options.letsencrypt'), value: 'letsencrypt' },
+            { label: t('request.form.authority.options.zerossl'), value: 'zerossl' },
           ]"
         />
       </UFormField>
 
-      <UFormField class="lg:col-span-2" name="domains" label="Domains" help="Enter domains separated by commas. The first one becomes primary.">
+      <UFormField class="lg:col-span-2" name="domains" :label="t('request.form.domains.label')" :help="t('request.form.domains.hint')">
         <UInput
           v-model="domainsInput"
           class="w-full"
-          placeholder="example.com, www.example.com"
+          :placeholder="t('request.form.domains.placeholder')"
           icon="i-lucide-globe"
           variant="outline"
           size="md"
@@ -91,7 +97,7 @@ defineExpose({ validateAndSubmit })
       </UFormField>
 
       <UFormField class="lg:col-span-2" name="wildcard">
-        <UCheckbox v-model="wildcard" label="Include wildcard coverage" />
+        <UCheckbox v-model="wildcard" :label="t('request.form.wildcard.label')" />
       </UFormField>
     </div>
   </UForm>
