@@ -3,6 +3,7 @@ services:
     build:
       context: .
       target: development
+    container_name: certigen
     env_file: .env
     ports:
       - "${FORWARD_PORT:-3000}:3000"

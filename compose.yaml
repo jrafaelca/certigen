@@ -1,6 +1,7 @@
 services:
   certigen:
     image: ghcr.io/jrafaelca/certigen:latest
+    container_name: certigen
     restart: unless-stopped
     env_file: .env
     ports:
