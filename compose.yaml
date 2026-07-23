@@ -1,7 +1,6 @@
 services:
-  certigen:
-    image: ghcr.io/jrafaelca/certigen:latest
-    container_name: certigen
+  app:
+    image: "${DOCKER_IMAGE:-ghcr.io/jrafaelca/certigen:latest}"
     restart: unless-stopped
     env_file: .env
     ports:

@@ -15,7 +15,6 @@ RUN pnpm install --frozen-lockfile
 FROM deps AS development
 ENV NODE_ENV=development \
     CI=true
-EXPOSE 3000
 CMD ["pnpm", "dev"]
 
 FROM deps AS build
@@ -40,5 +39,4 @@ COPY --from=build /app/.output ./.output
 COPY server/utils ./server/utils
 COPY server/certbot-hooks ./server/certbot-hooks
 RUN mkdir -p /data && chmod +x /app/server/certbot-hooks/*.js
-EXPOSE 3000
 CMD ["node", ".output/server/index.mjs"]
